@@ -1,4 +1,4 @@
-# EarEyes Ideathon Prototype
+# Learning Support Portal
 
 A PHP + MySQL prototype for:
 - AI-driven dropout risk early warning
@@ -15,8 +15,12 @@ A PHP + MySQL prototype for:
 
 ## Project Structure
 - `login.php` role-based login page
+- `student-register.php` student registration page
+- `student-home.php` student portal after login
 - `logout.php` session logout
-- `index.php` protected dashboard
+- `index.php` public sample homepage (limited access)
+- `students.php` main authenticated student hub
+- `dashboard.php` authenticated analytics dashboard
 - `api/students.php` risk model + student analytics endpoint
 - `api/alerts.php` actionable alerts endpoint
 - `api/chatbot.php` AI assistant endpoint
@@ -36,23 +40,28 @@ A PHP + MySQL prototype for:
    - host: `127.0.0.1`
    - user: `root`
    - pass: `` (empty by default)
-   - db: `ear_eyes`
+   - db: `learning_portal`
 5. Open:
-   - `http://localhost/EarEyes-Ideathon/login.php`
+   - `http://localhost/EarEyes-Ideathon/`
 
 ## Default Login Credentials
 - Admin:
-  - Email: `admin@eareyes.local`
+  - Email: `admin@platform.local`
   - Password: `admin123`
 - Educator:
-  - Email: `educator@eareyes.local`
+  - Email: `educator@platform.local`
   - Password: `educator123`
 - Counselor:
-  - Email: `counselor@eareyes.local`
+  - Email: `counselor@platform.local`
   - Password: `counselor123`
+- Student (seeded):
+  - Email: `student1@platform.local`
+  - Password: `student123`
 
 ## Notes
 - The risk engine in `api/students.php` uses weighted rules from attendance, scores, and behavior incidents.
 - The chatbot in `api/chatbot.php` generates contextual intervention guidance from real dashboard metrics.
 - PWA files (`manifest.json`, `service-worker.js`) provide install/offline behavior for mobile-style usage.
 - Replace seeded data and demo credentials before production.
+
+

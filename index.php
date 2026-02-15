@@ -2,13 +2,14 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $user = currentUser();
+$studentUser = currentStudent();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EarEyes | Public Homepage</title>
+  <title>Learning Support Portal | Public Homepage</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -16,7 +17,7 @@ $user = currentUser();
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">EarEyes</div>
+    <div class="brand">Learning Support Portal</div>
     <nav>
       <a href="#overview">Overview</a>
       <a href="#features">Features</a>
@@ -26,7 +27,11 @@ $user = currentUser();
       <?php if ($user): ?>
         <strong><?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
         <span><?php echo htmlspecialchars(ucfirst($user['role']), ENT_QUOTES, 'UTF-8'); ?></span>
-        <a class="logout-link" href="dashboard.php">Dashboard</a>
+        <a class="logout-link" href="students.php">Students</a>
+      <?php elseif ($studentUser): ?>
+        <strong><?php echo htmlspecialchars($studentUser['full_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
+        <span>Student</span>
+        <a class="logout-link" href="student-home.php">My Home</a>
       <?php else: ?>
         <strong>Guest</strong>
         <span>Public Access</span>
@@ -40,8 +45,9 @@ $user = currentUser();
       <div>
         <p class="eyebrow">Public Preview</p>
         <h1>AI-Driven Personalized Learning with Mental Health Intelligence</h1>
-        <p class="subtitle">This homepage shows the platform concept. Full dashboards, alerts, and AI assistant are restricted to authenticated users.</p>
-        <p><a class="cta-link" href="login.php">Login to access full system</a></p>
+        <p class="subtitle">This homepage shows the platform concept. The student-centered workspace is the main module and requires login.</p>
+        <p><a class="cta-link" href="login.php">Login</a></p>
+        <p style="margin-top:8px;"><a class="cta-link" href="student-register.php">Student Register</a></p>
       </div>
       <div class="hero-card">
         <h2>What This Platform Does</h2>
@@ -82,16 +88,17 @@ $user = currentUser();
         <article class="metric"><h3>Educator</h3><span>Learning analytics, interventions, and tutoring workflows</span></article>
         <article class="metric"><h3>Counselor</h3><span>Mental wellness signals and counseling prioritization</span></article>
       </div>
-      <p style="margin-top: 14px;"><a class="cta-link" href="login.php">Proceed to Login</a></p>
+      <p style="margin-top: 14px;"><a class="cta-link" href="login.php">Login</a></p>
     </section>
   </main>
 
   <div id="login-toast" class="login-toast" aria-live="polite"></div>
 
   <footer>
-    <p>EarEyes Ideathon Prototype | Public sample homepage with restricted feature access.</p>
+    <p>Learning Support Portal | Public sample homepage with restricted feature access.</p>
   </footer>
 
   <script src="assets/js/public.js"></script>
 </body>
 </html>
+

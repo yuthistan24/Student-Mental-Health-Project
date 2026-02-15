@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eareyes-v1';
+const CACHE_NAME = 'learning-portal-v1';
 const CACHE_FILES = [
   '/',
   '/index.php',
@@ -27,3 +27,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+

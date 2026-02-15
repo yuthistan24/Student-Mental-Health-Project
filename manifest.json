@@ -1,6 +1,6 @@
 {
-  "name": "EarEyes Learning Intelligence",
-  "short_name": "EarEyes",
+  "name": "Learning Support Portal",
+  "short_name": "LearnPortal",
   "start_url": "/index.php",
   "display": "standalone",
   "background_color": "#f5f8f4",
@@ -14,3 +14,4 @@
     }
   ]
 }
+

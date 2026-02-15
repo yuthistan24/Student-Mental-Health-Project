@@ -4,7 +4,11 @@ require_once __DIR__ . '/includes/auth.php';
 
 startAppSession();
 if (currentUser() !== null) {
-    header('Location: dashboard.php');
+    header('Location: students.php');
+    exit;
+}
+if (currentStudent() !== null) {
+    header('Location: student-home.php');
     exit;
 }
 
@@ -15,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedRole = trim($_POST['role_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $allowedRoles = ['admin', 'educator', 'counselor'];
+    $allowedRoles = ['admin', 'educator', 'counselor', 'student'];
 
     if (!in_array($selectedRole, $allowedRoles, true)) {
         $error = 'Please select a role.';
@@ -24,34 +28,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $conn = getDbConnection($dbConfig);
-            $stmt = $conn->prepare('SELECT id, full_name, email, role_name, password_hash, is_active FROM users WHERE email = ? LIMIT 1');
-            if (!$stmt) {
-                throw new RuntimeException('Failed to prepare user lookup.');
-            }
 
-            $stmt->bind_param('s', $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result ? $result->fetch_assoc() : null;
+            if ($selectedRole === 'student') {
+                $stmt = $conn->prepare('
+                    SELECT
+                        sa.student_id,
+                        sa.email,
+                        sa.password_hash,
+                        sa.is_active,
+                        s.full_name,
+                        s.grade_level
+                    FROM student_accounts sa
+                    INNER JOIN students s ON s.id = sa.student_id
+                    WHERE sa.email = ?
+                    LIMIT 1
+                ');
 
-            if (
-                !$user ||
-                (int) $user['is_active'] !== 1 ||
-                !password_verify($password, $user['password_hash']) ||
-                $user['role_name'] !== $selectedRole
-            ) {
-                $error = 'Invalid credentials.';
+                if (!$stmt) {
+                    throw new RuntimeException('Failed to prepare student lookup.');
+                }
+
+                $stmt->bind_param('s', $email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $student = $result ? $result->fetch_assoc() : null;
+
+                if (!$student || (int) $student['is_active'] !== 1 || !password_verify($password, $student['password_hash'])) {
+                    $error = 'Invalid credentials.';
+                } else {
+                    session_regenerate_id(true);
+                    $_SESSION['student_user'] = [
+                        'student_id' => (int) $student['student_id'],
+                        'full_name' => $student['full_name'],
+                        'email' => $student['email'],
+                        'grade_level' => $student['grade_level'],
+                    ];
+                    unset($_SESSION['user']);
+                    header('Location: student-home.php');
+                    exit;
+                }
             } else {
-                session_regenerate_id(true);
-                $_SESSION['user'] = [
-                    'id' => (int) $user['id'],
-                    'full_name' => $user['full_name'],
-                    'email' => $user['email'],
-                    'role' => $user['role_name'],
-                ];
+                $stmt = $conn->prepare('SELECT id, full_name, email, role_name, password_hash, is_active FROM users WHERE email = ? LIMIT 1');
+                if (!$stmt) {
+                    throw new RuntimeException('Failed to prepare user lookup.');
+                }
 
-                header('Location: dashboard.php');
-                exit;
+                $stmt->bind_param('s', $email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $user = $result ? $result->fetch_assoc() : null;
+
+                if (
+                    !$user ||
+                    (int) $user['is_active'] !== 1 ||
+                    !password_verify($password, $user['password_hash']) ||
+                    $user['role_name'] !== $selectedRole
+                ) {
+                    $error = 'Invalid credentials.';
+                } else {
+                    session_regenerate_id(true);
+                    $_SESSION['user'] = [
+                        'id' => (int) $user['id'],
+                        'full_name' => $user['full_name'],
+                        'email' => $user['email'],
+                        'role' => $user['role_name'],
+                    ];
+                    unset($_SESSION['student_user']);
+                    header('Location: students.php');
+                    exit;
+                }
             }
         } catch (Throwable $e) {
             $error = 'Login failed: ' . $e->getMessage();
@@ -64,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login | EarEyes</title>
+  <title>Login | Learning Support Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -73,9 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <main class="auth-wrapper">
     <section class="auth-card">
-      <p class="eyebrow">EarEyes Access</p>
-      <h1>Sign in to Dashboard</h1>
-      <p class="subtitle">Role-based access for administrators, educators, and counselors.</p>
+      <p class="eyebrow">Portal Access</p>
+      <h1>Sign in</h1>
+      <p class="subtitle">Select your role and log in.</p>
 
       <?php if ($error !== ''): ?>
         <p class="error-text"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
@@ -88,10 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="admin" <?php echo $selectedRole === 'admin' ? 'selected' : ''; ?>>Admin</option>
             <option value="educator" <?php echo $selectedRole === 'educator' ? 'selected' : ''; ?>>Educator</option>
             <option value="counselor" <?php echo $selectedRole === 'counselor' ? 'selected' : ''; ?>>Counselor</option>
+            <option value="student" <?php echo $selectedRole === 'student' ? 'selected' : ''; ?>>Student</option>
           </select>
         </label>
         <label>Email
-          <input type="email" name="email" required placeholder="admin@eareyes.local" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>" />
+          <input type="email" name="email" required placeholder="admin@platform.local" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>" />
         </label>
         <label>Password
           <input type="password" name="password" required placeholder="Enter password" />
@@ -99,9 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit">Login</button>
       </form>
 
-      <p class="auth-note">Default users: admin, educator, counselor (see README for credentials).</p>
+      <p class="auth-note">Need a student account? <a href="student-register.php">Student register</a>.</p>
     </section>
   </main>
 </body>
 </html>
-

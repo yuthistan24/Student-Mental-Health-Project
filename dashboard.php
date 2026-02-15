@@ -12,7 +12,7 @@ $isAdmin = $role === 'admin';
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EarEyes | AI Learning + Mental Health Intelligence</title>
+  <title>Learning Support Portal | AI Learning + Mental Health Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -21,8 +21,9 @@ $isAdmin = $role === 'admin';
 </head>
 <body data-role="<?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>">
   <header class="topbar">
-    <div class="brand"><a href="index.php" style="text-decoration:none;color:inherit;">EarEyes</a></div>
+    <div class="brand"><a href="index.php" style="text-decoration:none;color:inherit;">Learning Support Portal</a></div>
     <nav>
+      <a href="students.php">Students</a>
       <a href="#early-warning">Early Warning</a>
       <?php if ($canViewLearning): ?><a href="#learning">Personalized Learning</a><?php endif; ?>
       <a href="#hubs">Community Hubs</a>
@@ -132,7 +133,7 @@ $isAdmin = $role === 'admin';
       <p>Ask for intervention suggestions, risk patterns, counseling priorities, and hub support recommendations.</p>
       <div class="chat-shell">
         <div id="chat-window" class="chat-window">
-          <div class="chat-message bot">I am your EarEyes assistant. Ask: "Who is highest risk?" or "Give attendance intervention ideas."</div>
+          <div class="chat-message bot">I am your platform assistant. Ask: "Who is highest risk?" or "Give attendance intervention ideas."</div>
         </div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" type="text" placeholder="Type a question..." maxlength="500" required />
@@ -150,9 +151,10 @@ $isAdmin = $role === 'admin';
   </main>
 
   <footer>
-    <p>EarEyes Ideathon Prototype | Built with PHP, MySQL, and offline-capable web components.</p>
+    <p>Learning Support Portal | Built with PHP, MySQL, and offline-capable web components.</p>
   </footer>
 
   <script src="assets/js/app.js"></script>
 </body>
 </html>
+

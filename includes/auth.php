@@ -12,6 +12,12 @@ function currentUser(): ?array
     return $_SESSION['user'] ?? null;
 }
 
+function currentStudent(): ?array
+{
+    startAppSession();
+    return $_SESSION['student_user'] ?? null;
+}
+
 function requireLogin(bool $isApi = false): array
 {
     $user = currentUser();
@@ -48,3 +54,22 @@ function requireRole(array $roles, bool $isApi = false): array
     echo 'Forbidden';
     exit;
 }
+
+function requireStudentLogin(bool $isApi = false): array
+{
+    $student = currentStudent();
+    if ($student !== null) {
+        return $student;
+    }
+
+    if ($isApi) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'Unauthorized student access. Please log in.']);
+        exit;
+    }
+
+    header('Location: login.php');
+    exit;
+}
+

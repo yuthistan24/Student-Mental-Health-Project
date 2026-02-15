@@ -1,4 +1,4 @@
-USE ear_eyes;
+USE learning_portal;
 
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE chatbot_messages;
@@ -10,14 +10,15 @@ TRUNCATE TABLE learning_modules;
 TRUNCATE TABLE behavior_records;
 TRUNCATE TABLE assessment_scores;
 TRUNCATE TABLE attendance_records;
+TRUNCATE TABLE student_accounts;
 TRUNCATE TABLE students;
 TRUNCATE TABLE users;
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO users (full_name, email, role_name, password_hash, is_active) VALUES
-('System Administrator', 'admin@eareyes.local', 'admin', '$2y$10$.WY3JF4mJsYf5aD2KKf3LOv3.v6k8TNF3zX4GNkxgvzS0EmPfvocW', 1),
-('Lead Educator', 'educator@eareyes.local', 'educator', '$2y$10$BV7uVdFrROduCjIlKfScaOZUFZutC3h0uIzpsAP6yHIDozey2Xpgm', 1),
-('Student Counselor', 'counselor@eareyes.local', 'counselor', '$2y$10$a.6lBIS.tvGe/25VNLCgWeayGcVmQOt87imjarGgkFO/9aINpdhAi', 1);
+('System Administrator', 'admin@platform.local', 'admin', '$2y$10$.WY3JF4mJsYf5aD2KKf3LOv3.v6k8TNF3zX4GNkxgvzS0EmPfvocW', 1),
+('Lead Educator', 'educator@platform.local', 'educator', '$2y$10$BV7uVdFrROduCjIlKfScaOZUFZutC3h0uIzpsAP6yHIDozey2Xpgm', 1),
+('Student Counselor', 'counselor@platform.local', 'counselor', '$2y$10$a.6lBIS.tvGe/25VNLCgWeayGcVmQOt87imjarGgkFO/9aINpdhAi', 1);
 
 INSERT INTO students (student_code, full_name, grade_level, community_zone) VALUES
 ('STU-001', 'Amina Lopez', '8', 'North District'),
@@ -25,6 +26,9 @@ INSERT INTO students (student_code, full_name, grade_level, community_zone) VALU
 ('STU-003', 'Priya Nair', '10', 'North District'),
 ('STU-004', 'Noah Dela Rosa', '8', 'Hill Block'),
 ('STU-005', 'Fatima Rahman', '11', 'River Ward');
+
+INSERT INTO student_accounts (student_id, email, password_hash, is_active) VALUES
+(1, 'student1@platform.local', '$2y$10$nnK3nIdhYbLUUocha3hV/ekJJu4enxWCRgh7sVruREDGqmNS/tASa', 1);
 
 INSERT INTO attendance_records (student_id, attendance_date, status) VALUES
 (1, '2026-01-05', 'present'), (1, '2026-01-06', 'late'), (1, '2026-01-07', 'present'), (1, '2026-01-08', 'absent'), (1, '2026-01-09', 'present'),
@@ -75,3 +79,4 @@ INSERT INTO alerts (student_id, alert_level, alert_message, recommended_action, 
 (2, 'high', 'High dropout risk detected: low attendance and weak performance trend.', 'Assign counselor within 24h, start family outreach, and enroll in math recovery path.', 'open'),
 (4, 'high', 'Behavior escalation with repeated absences indicates urgent risk.', 'Trigger behavior intervention plan and schedule weekly tutor check-ins.', 'in_progress'),
 (1, 'medium', 'Attendance instability may impact progression in core subjects.', 'Set attendance mentor and push offline micro-lessons for missed units.', 'open');
+

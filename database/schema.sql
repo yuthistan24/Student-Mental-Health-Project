@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS ear_eyes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE ear_eyes;
+CREATE DATABASE IF NOT EXISTS learning_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE learning_portal;
 
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -18,6 +18,16 @@ CREATE TABLE IF NOT EXISTS students (
     grade_level VARCHAR(30) NOT NULL,
     community_zone VARCHAR(80) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS student_accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS attendance_records (
@@ -112,3 +122,4 @@ CREATE TABLE IF NOT EXISTS chatbot_messages (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_chatbot_created (created_at)
 );
+

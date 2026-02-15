@@ -10,6 +10,7 @@ TRUNCATE TABLE learning_modules;
 TRUNCATE TABLE behavior_records;
 TRUNCATE TABLE assessment_scores;
 TRUNCATE TABLE attendance_records;
+TRUNCATE TABLE student_background_profiles;
 TRUNCATE TABLE student_accounts;
 TRUNCATE TABLE students;
 TRUNCATE TABLE users;
@@ -29,6 +30,13 @@ INSERT INTO students (student_code, full_name, grade_level, community_zone) VALU
 
 INSERT INTO student_accounts (student_id, email, password_hash, is_active) VALUES
 (1, 'student1@platform.local', '$2y$10$nnK3nIdhYbLUUocha3hV/ekJJu4enxWCRgh7sVruREDGqmNS/tASa', 1);
+
+INSERT INTO student_background_profiles (
+    student_id, attempted_exam, target_stream, current_stream, stream_mismatch,
+    financial_issues, worked_after_school, work_history_note, study_gap_months,
+    confidence_level, primary_challenge, goals
+) VALUES
+(1, 'neet', 'Medicine', 'B.Sc Life Sciences', 1, 1, 1, 'Part-time evening store work after school', 18, 'low', 'Forgot core biology and chemistry basics after a study break', 'Rebuild foundations and transition to a healthcare-related career path');
 
 INSERT INTO attendance_records (student_id, attendance_date, status) VALUES
 (1, '2026-01-05', 'present'), (1, '2026-01-06', 'late'), (1, '2026-01-07', 'present'), (1, '2026-01-08', 'absent'), (1, '2026-01-09', 'present'),

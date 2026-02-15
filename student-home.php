@@ -16,6 +16,17 @@ try {
     $conn = getDbConnection($dbConfig);
     $studentId = (int) $student['student_id'];
 
+    $profileCheck = $conn->prepare('SELECT student_id FROM student_background_profiles WHERE student_id = ? LIMIT 1');
+    if ($profileCheck) {
+        $profileCheck->bind_param('i', $studentId);
+        $profileCheck->execute();
+        $profile = $profileCheck->get_result()->fetch_assoc();
+        if (!$profile) {
+            header('Location: student-onboarding.php');
+            exit;
+        }
+    }
+
     $attendanceRes = $conn->query("SELECT AVG(CASE WHEN status='present' THEN 1 ELSE 0 END) * 100 AS attendance_pct FROM attendance_records WHERE student_id = {$studentId}");
     $scoreRes = $conn->query("SELECT AVG(score) AS avg_score FROM assessment_scores WHERE student_id = {$studentId}");
     $behaviorRes = $conn->query("SELECT SUM(CASE WHEN severity IN ('moderate','high') THEN 1 ELSE 0 END) AS behavior_incidents FROM behavior_records WHERE student_id = {$studentId}");

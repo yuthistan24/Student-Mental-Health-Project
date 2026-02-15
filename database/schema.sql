@@ -30,6 +30,25 @@ CREATE TABLE IF NOT EXISTS student_accounts (
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS student_background_profiles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL UNIQUE,
+    attempted_exam ENUM('none', 'neet', 'jee', 'both') NOT NULL DEFAULT 'none',
+    target_stream VARCHAR(120) NULL,
+    current_stream VARCHAR(120) NULL,
+    stream_mismatch TINYINT(1) NOT NULL DEFAULT 0,
+    financial_issues TINYINT(1) NOT NULL DEFAULT 0,
+    worked_after_school TINYINT(1) NOT NULL DEFAULT 0,
+    work_history_note VARCHAR(255) NULL,
+    study_gap_months INT NOT NULL DEFAULT 0,
+    confidence_level ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+    primary_challenge VARCHAR(255) NULL,
+    goals VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS attendance_records (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,

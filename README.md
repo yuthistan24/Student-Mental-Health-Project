@@ -15,7 +15,9 @@ A PHP + MySQL prototype for:
 
 ## Project Structure
 - `login.php` role-based login page
+- `register.php` unified registration page (admin, educator, counselor, student)
 - `student-register.php` student registration page
+- `student-onboarding.php` student background questionnaire for personalization
 - `student-home.php` student portal after login
 - `logout.php` session logout
 - `index.php` public sample homepage (limited access)
@@ -60,7 +62,8 @@ A PHP + MySQL prototype for:
 
 ## Notes
 - The risk engine in `api/students.php` uses weighted rules from attendance, scores, and behavior incidents.
-- The chatbot in `api/chatbot.php` generates contextual intervention guidance from real dashboard metrics.
+- The staff chatbot in `api/chatbot.php` generates contextual intervention guidance from real dashboard metrics.
+- The student chatbot in `api/student-chatbot.php` customizes guidance using onboarding background responses.
 - PWA files (`manifest.json`, `service-worker.js`) provide install/offline behavior for mobile-style usage.
 - Replace seeded data and demo credentials before production.
 

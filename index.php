@@ -47,7 +47,7 @@ $studentUser = currentStudent();
         <h1>AI-Driven Personalized Learning with Mental Health Intelligence</h1>
         <p class="subtitle">This homepage shows the platform concept. The student-centered workspace is the main module and requires login.</p>
         <p><a class="cta-link" href="login.php">Login</a></p>
-        <p style="margin-top:8px;"><a class="cta-link" href="student-register.php">Student Register</a></p>
+        <p style="margin-top:8px;"><a class="cta-link" href="register.php">Register</a></p>
       </div>
       <div class="hero-card">
         <h2>What This Platform Does</h2>
@@ -88,7 +88,7 @@ $studentUser = currentStudent();
         <article class="metric"><h3>Educator</h3><span>Learning analytics, interventions, and tutoring workflows</span></article>
         <article class="metric"><h3>Counselor</h3><span>Mental wellness signals and counseling prioritization</span></article>
       </div>
-      <p style="margin-top: 14px;"><a class="cta-link" href="login.php">Login</a></p>
+      <p style="margin-top: 14px;"><a class="cta-link" href="login.php">Login</a> <a class="cta-link" href="register.php">Register</a></p>
     </section>
   </main>
 

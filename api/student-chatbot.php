@@ -25,6 +25,7 @@ try {
         'mastery_score' => 0.0,
         'behavior_incidents' => 0,
     ];
+    $profile = null;
 
     $attendanceRes = $conn->query("SELECT AVG(CASE WHEN status='present' THEN 1 ELSE 0 END) * 100 AS attendance_pct FROM attendance_records WHERE student_id = {$studentId}");
     $scoreRes = $conn->query("SELECT AVG(score) AS avg_score FROM assessment_scores WHERE student_id = {$studentId}");
@@ -43,6 +44,21 @@ try {
     if ($progressRes && ($row = $progressRes->fetch_assoc())) {
         $stats['completion_pct'] = (float) ($row['completion_pct'] ?? 0);
         $stats['mastery_score'] = (float) ($row['mastery_score'] ?? 0);
+    }
+
+    $profileStmt = $conn->prepare('
+        SELECT
+            attempted_exam, target_stream, current_stream, stream_mismatch,
+            financial_issues, worked_after_school, work_history_note, study_gap_months,
+            confidence_level, primary_challenge, goals
+        FROM student_background_profiles
+        WHERE student_id = ?
+        LIMIT 1
+    ');
+    if ($profileStmt) {
+        $profileStmt->bind_param('i', $studentId);
+        $profileStmt->execute();
+        $profile = $profileStmt->get_result()->fetch_assoc();
     }
 
     $q = strtolower($message);
@@ -66,6 +82,38 @@ try {
         $reply = 'Suggested plan: 1) 25 minutes focused practice, 2) 10-question quiz, 3) review mistakes, 4) ask for help on difficult topics.';
     } else {
         $reply = 'I can help with study plans, attendance improvement, stress support, and learning goals. Ask: "How can I improve my attendance?"';
+    }
+
+    if ($profile) {
+        $context = [];
+        if ($profile['attempted_exam'] !== 'none') {
+            $context[] = strtoupper((string) $profile['attempted_exam']) . ' background';
+        }
+        if ((int) $profile['stream_mismatch'] === 1 && $profile['target_stream'] !== '' && $profile['current_stream'] !== '') {
+            $context[] = 'stream transition from ' . $profile['target_stream'] . ' to ' . $profile['current_stream'];
+        }
+        if ((int) $profile['financial_issues'] === 1) {
+            $context[] = 'financial pressure';
+        }
+        if ((int) $profile['worked_after_school'] === 1) {
+            $context[] = 'work-study history';
+        }
+        if ((int) $profile['study_gap_months'] >= 6) {
+            $context[] = 'study gap of ' . (int) $profile['study_gap_months'] . ' months';
+        }
+        if ($profile['confidence_level'] === 'low') {
+            $context[] = 'low confidence currently';
+        }
+
+        if (!empty($context)) {
+            $reply .= ' Based on your profile (' . implode(', ', $context) . '), start with foundational revision and short daily consistency goals.';
+        }
+
+        if (!empty($profile['goals'])) {
+            $reply .= ' Your stated goal: "' . $profile['goals'] . '".';
+        }
+    } else {
+        $reply .= ' To get more personalized guidance, complete your onboarding questionnaire.';
     }
 
     jsonResponse([

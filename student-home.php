@@ -113,7 +113,7 @@ try {
       <p>Ask for study plans, attendance tips, and wellbeing guidance.</p>
       <div class="chat-shell">
         <div id="chat-window" class="chat-window">
-          <div class="chat-message bot">I am your study assistant. Ask: "How can I improve my attendance?"</div>
+          <div class="chat-message bot">I am your study assistant. Ask: "How can I improve my attendance?" or say "start profile interview" for a personalized intake chat.</div>
         </div>
         <div class="voice-row">
           <span id="chat-voice-status" class="voice-status">Voice ready</span>

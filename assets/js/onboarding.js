@@ -17,12 +17,6 @@ function appendInterviewMessage(role, text) {
   windowEl.scrollTop = windowEl.scrollHeight;
 }
 
-function setFormValue(field, value) {
-  const el = document.querySelector(`[name="${field}"]`);
-  if (!el) return;
-  el.value = value;
-}
-
 function createVoiceController() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const micButton = document.getElementById('interview-mic');
@@ -111,17 +105,33 @@ function setupOnboardingInterview() {
   const form = document.getElementById('interview-form');
   const answerInput = document.getElementById('interview-answer');
   const saveHint = document.getElementById('interview-save-hint');
-  const stepInput = document.getElementById('interview-step');
   const prompt = document.getElementById('interview-prompt');
-  if (!form || !answerInput || !stepInput || !prompt) return;
+  if (!form || !answerInput || !prompt) return;
 
   const voiceState = createVoiceController();
-  speak(voiceState, prompt.textContent.trim());
+
+  async function startInterview() {
+    try {
+      const payload = await fetchJson('api/onboarding-assistant.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      });
+
+      const reply = payload.reply || 'Let us begin.';
+      appendInterviewMessage('bot', reply);
+      prompt.textContent = payload.next_question || 'Interview in progress...';
+      speak(voiceState, reply);
+    } catch (error) {
+      const fallback = `Interview assistant unavailable: ${error.message}`;
+      appendInterviewMessage('bot', fallback);
+      speak(voiceState, fallback);
+    }
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const message = answerInput.value.trim();
-    const step = Number(stepInput.value || '0');
     if (!message) return;
 
     appendInterviewMessage('user', message);
@@ -131,25 +141,24 @@ function setupOnboardingInterview() {
       const payload = await fetchJson('api/onboarding-assistant.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step, message }),
+        body: JSON.stringify({ action: 'answer', message }),
       });
 
-      if (payload.field && payload.recognized_value !== null && payload.recognized_value !== undefined) {
-        setFormValue(payload.field, payload.recognized_value);
-      }
-
-      stepInput.value = String(payload.next_step ?? step);
       const reply = payload.reply || 'Please continue.';
       appendInterviewMessage('bot', reply);
       speak(voiceState, reply);
 
       if (payload.done) {
-        prompt.textContent = 'Interview complete. Review your form and click Save and Continue.';
+        prompt.textContent = 'Interview complete. Redirecting to your student home...';
         if (saveHint) {
           saveHint.hidden = false;
         }
-      } else if (payload.next_question) {
-        prompt.textContent = payload.next_question;
+        const redirectTo = payload.redirect_to || 'student-home.php';
+        setTimeout(() => {
+          window.location.href = redirectTo;
+        }, 1800);
+      } else {
+        prompt.textContent = payload.next_question || 'Please continue.';
       }
     } catch (error) {
       const fallback = `Interview assistant unavailable: ${error.message}`;
@@ -157,6 +166,8 @@ function setupOnboardingInterview() {
       speak(voiceState, fallback);
     }
   });
+
+  startInterview();
 }
 
 setupOnboardingInterview();

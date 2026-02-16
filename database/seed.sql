@@ -16,27 +16,28 @@ TRUNCATE TABLE students;
 TRUNCATE TABLE users;
 SET FOREIGN_KEY_CHECKS = 1;
 
-INSERT INTO users (full_name, email, role_name, password_hash, is_active) VALUES
-('System Administrator', 'admin@platform.local', 'admin', '$2y$10$.WY3JF4mJsYf5aD2KKf3LOv3.v6k8TNF3zX4GNkxgvzS0EmPfvocW', 1),
-('Lead Educator', 'educator@platform.local', 'educator', '$2y$10$BV7uVdFrROduCjIlKfScaOZUFZutC3h0uIzpsAP6yHIDozey2Xpgm', 1),
-('Student Counselor', 'counselor@platform.local', 'counselor', '$2y$10$a.6lBIS.tvGe/25VNLCgWeayGcVmQOt87imjarGgkFO/9aINpdhAi', 1);
+INSERT INTO users (full_name, email, phone_number, address_line, role_name, password_hash, is_active) VALUES
+('System Administrator', 'admin@platform.local', '+91-9000000001', 'Head Office Campus, Block A', 'admin', '$2y$10$.WY3JF4mJsYf5aD2KKf3LOv3.v6k8TNF3zX4GNkxgvzS0EmPfvocW', 1),
+('Lead Educator', 'educator@platform.local', '+91-9000000002', 'Academic Center, Block B', 'educator', '$2y$10$BV7uVdFrROduCjIlKfScaOZUFZutC3h0uIzpsAP6yHIDozey2Xpgm', 1),
+('Student Counselor', 'counselor@platform.local', '+91-9000000003', 'Wellness Wing, Block C', 'counselor', '$2y$10$a.6lBIS.tvGe/25VNLCgWeayGcVmQOt87imjarGgkFO/9aINpdhAi', 1);
 
-INSERT INTO students (student_code, full_name, grade_level, community_zone) VALUES
-('STU-001', 'Amina Lopez', '8', 'North District'),
-('STU-002', 'Jayden Cruz', '9', 'River Ward'),
-('STU-003', 'Priya Nair', '10', 'North District'),
-('STU-004', 'Noah Dela Rosa', '8', 'Hill Block'),
-('STU-005', 'Fatima Rahman', '11', 'River Ward');
+INSERT INTO students (student_code, full_name, grade_level, phone_number, address_line, community_zone) VALUES
+('STU-001', 'Amina Lopez', '8', '+91-9100000001', 'North District, Street 5', 'North District'),
+('STU-002', 'Jayden Cruz', '9', '+91-9100000002', 'River Ward, Lane 2', 'River Ward'),
+('STU-003', 'Priya Nair', '10', '+91-9100000003', 'North District, Street 1', 'North District'),
+('STU-004', 'Noah Dela Rosa', '8', '+91-9100000004', 'Hill Block, Sector 8', 'Hill Block'),
+('STU-005', 'Fatima Rahman', '11', '+91-9100000005', 'River Ward, Lane 7', 'River Ward');
 
 INSERT INTO student_accounts (student_id, email, password_hash, is_active) VALUES
 (1, 'student1@platform.local', '$2y$10$nnK3nIdhYbLUUocha3hV/ekJJu4enxWCRgh7sVruREDGqmNS/tASa', 1);
 
 INSERT INTO student_background_profiles (
     student_id, attempted_exam, target_stream, current_stream, stream_mismatch,
-    financial_issues, worked_after_school, work_history_note, study_gap_months,
+    financial_issues, worked_after_school, work_history_note, study_gap_months, gap_years, gap_year_reason,
+    feeling_about_studies, discomfort_due_to_issues, discomfort_reason,
     confidence_level, primary_challenge, goals
 ) VALUES
-(1, 'neet', 'Medicine', 'B.Sc Life Sciences', 1, 1, 1, 'Part-time evening store work after school', 18, 'low', 'Forgot core biology and chemistry basics after a study break', 'Rebuild foundations and transition to a healthcare-related career path');
+(1, 'neet', 'Medicine', 'B.Sc Life Sciences', 1, 1, 1, 'Part-time evening store work after school', 18, 1, 'Could not afford coaching and took a break for family support', 'stressed', 1, 'Feels disconnected from original preparation path', 'low', 'Forgot core biology and chemistry basics after a study break', 'Rebuild foundations and transition to a healthcare-related career path');
 
 INSERT INTO attendance_records (student_id, attendance_date, status) VALUES
 (1, '2026-01-05', 'present'), (1, '2026-01-06', 'late'), (1, '2026-01-07', 'present'), (1, '2026-01-08', 'absent'), (1, '2026-01-09', 'present'),

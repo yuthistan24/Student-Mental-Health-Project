@@ -49,7 +49,8 @@ try {
     $profileStmt = $conn->prepare('
         SELECT
             attempted_exam, target_stream, current_stream, stream_mismatch,
-            financial_issues, worked_after_school, work_history_note, study_gap_months,
+            financial_issues, worked_after_school, work_history_note, study_gap_months, gap_years, gap_year_reason,
+            feeling_about_studies, discomfort_due_to_issues, discomfort_reason,
             confidence_level, primary_challenge, goals
         FROM student_background_profiles
         WHERE student_id = ?
@@ -78,6 +79,10 @@ try {
         }
     } elseif (strpos($q, 'stress') !== false || strpos($q, 'mental') !== false || strpos($q, 'anxious') !== false) {
         $reply = 'If you feel stressed, break study time into short sessions, take 5-minute pauses, and speak to a counselor or trusted adult for support.';
+    } elseif (strpos($q, 'gap') !== false || strpos($q, 'out of touch') !== false) {
+        $reply = 'For education gaps, restart with fundamentals for 2 weeks, then move to mixed practice. Use a daily recall routine to rebuild memory.';
+    } elseif (strpos($q, 'jee') !== false || strpos($q, 'neet') !== false || strpos($q, 'stream') !== false) {
+        $reply = 'If your stream changed after JEE/NEET preparation, convert your prior strengths into current subjects through bridge topics and weekly mentor feedback.';
     } elseif (strpos($q, 'plan') !== false || strpos($q, 'study') !== false) {
         $reply = 'Suggested plan: 1) 25 minutes focused practice, 2) 10-question quiz, 3) review mistakes, 4) ask for help on difficult topics.';
     } else {
@@ -101,12 +106,37 @@ try {
         if ((int) $profile['study_gap_months'] >= 6) {
             $context[] = 'study gap of ' . (int) $profile['study_gap_months'] . ' months';
         }
+        if ((int) ($profile['gap_years'] ?? 0) > 0) {
+            $context[] = (int) $profile['gap_years'] . ' gap year(s)';
+        }
+        if (!empty($profile['gap_year_reason'])) {
+            $context[] = 'gap-year reason: ' . $profile['gap_year_reason'];
+        }
+        if (!empty($profile['feeling_about_studies']) && $profile['feeling_about_studies'] !== 'neutral') {
+            $context[] = 'currently feeling ' . $profile['feeling_about_studies'];
+        }
+        if ((int) ($profile['discomfort_due_to_issues'] ?? 0) === 1) {
+            $context[] = 'feeling uncomfortable due to personal/academic issues';
+        }
+        if (!empty($profile['discomfort_reason'])) {
+            $context[] = 'reported discomfort reason: ' . $profile['discomfort_reason'];
+        }
         if ($profile['confidence_level'] === 'low') {
             $context[] = 'low confidence currently';
         }
 
         if (!empty($context)) {
             $reply .= ' Based on your profile (' . implode(', ', $context) . '), start with foundational revision and short daily consistency goals.';
+        }
+
+        if ((int) ($profile['gap_years'] ?? 0) > 0 || (int) ($profile['study_gap_months'] ?? 0) >= 6) {
+            $reply .= ' Because you had a study gap, use a bridge plan: basics first, then timed practice after week two.';
+        }
+        if ((int) ($profile['stream_mismatch'] ?? 0) === 1) {
+            $reply .= ' For stream transition, map transferable concepts from your previous preparation to current coursework.';
+        }
+        if ((int) ($profile['financial_issues'] ?? 0) === 1) {
+            $reply .= ' For financial pressure, prioritize low-cost digital resources and community hub tutoring support.';
         }
 
         if (!empty($profile['goals'])) {

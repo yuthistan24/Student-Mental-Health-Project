@@ -28,6 +28,11 @@ $form = [
     'worked_after_school' => isset($existing['worked_after_school']) ? (string) $existing['worked_after_school'] : '0',
     'work_history_note' => $existing['work_history_note'] ?? '',
     'study_gap_months' => isset($existing['study_gap_months']) ? (string) $existing['study_gap_months'] : '0',
+    'gap_years' => isset($existing['gap_years']) ? (string) $existing['gap_years'] : '0',
+    'gap_year_reason' => $existing['gap_year_reason'] ?? '',
+    'feeling_about_studies' => $existing['feeling_about_studies'] ?? 'neutral',
+    'discomfort_due_to_issues' => isset($existing['discomfort_due_to_issues']) ? (string) $existing['discomfort_due_to_issues'] : '0',
+    'discomfort_reason' => $existing['discomfort_reason'] ?? '',
     'confidence_level' => $existing['confidence_level'] ?? 'medium',
     'primary_challenge' => $existing['primary_challenge'] ?? '',
     'goals' => $existing['goals'] ?? '',
@@ -40,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!in_array($form['attempted_exam'], ['none', 'neet', 'jee', 'both'], true)) {
         $error = 'Please select a valid exam history.';
+    } elseif (!in_array($form['feeling_about_studies'], ['motivated', 'neutral', 'stressed', 'burned_out'], true)) {
+        $error = 'Please select a valid current feeling about studies.';
     } elseif (!in_array($form['confidence_level'], ['low', 'medium', 'high'], true)) {
         $error = 'Please select a valid confidence level.';
     } else {
@@ -48,14 +55,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $streamMismatch = $form['stream_mismatch'] === '1' ? 1 : 0;
             $financialIssues = $form['financial_issues'] === '1' ? 1 : 0;
             $workedAfterSchool = $form['worked_after_school'] === '1' ? 1 : 0;
+            $discomfortDueToIssues = $form['discomfort_due_to_issues'] === '1' ? 1 : 0;
             $studyGapMonths = max(0, (int) $form['study_gap_months']);
+            $gapYears = max(0, (int) $form['gap_years']);
 
             $sql = '
                 INSERT INTO student_background_profiles (
                     student_id, attempted_exam, target_stream, current_stream, stream_mismatch,
-                    financial_issues, worked_after_school, work_history_note, study_gap_months,
+                    financial_issues, worked_after_school, work_history_note, study_gap_months, gap_years, gap_year_reason,
+                    feeling_about_studies, discomfort_due_to_issues, discomfort_reason,
                     confidence_level, primary_challenge, goals
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     attempted_exam = VALUES(attempted_exam),
                     target_stream = VALUES(target_stream),
@@ -65,6 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     worked_after_school = VALUES(worked_after_school),
                     work_history_note = VALUES(work_history_note),
                     study_gap_months = VALUES(study_gap_months),
+                    gap_years = VALUES(gap_years),
+                    gap_year_reason = VALUES(gap_year_reason),
+                    feeling_about_studies = VALUES(feeling_about_studies),
+                    discomfort_due_to_issues = VALUES(discomfort_due_to_issues),
+                    discomfort_reason = VALUES(discomfort_reason),
                     confidence_level = VALUES(confidence_level),
                     primary_challenge = VALUES(primary_challenge),
                     goals = VALUES(goals),
@@ -77,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $stmt->bind_param(
-                'isssiiisisss',
+                'isssiiisiississss',
                 $studentId,
                 $form['attempted_exam'],
                 $form['target_stream'],
@@ -87,6 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $workedAfterSchool,
                 $form['work_history_note'],
                 $studyGapMonths,
+                $gapYears,
+                $form['gap_year_reason'],
+                $form['feeling_about_studies'],
+                $discomfortDueToIssues,
+                $form['discomfort_reason'],
                 $form['confidence_level'],
                 $form['primary_challenge'],
                 $form['goals']
@@ -114,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <main class="auth-wrapper">
-    <section class="auth-card" style="width:min(760px,95vw);">
+    <section class="auth-card onboarding-card">
       <p class="eyebrow">Student Onboarding</p>
       <h1>Tell us your background</h1>
       <p class="subtitle">These answers help personalize your AI guidance and learning path.</p>
@@ -122,6 +142,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if ($error !== ''): ?>
         <p class="error-text"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
       <?php endif; ?>
+
+      <section class="panel interview-panel">
+        <h2>AI Voice Interview</h2>
+        <p id="interview-prompt">Have you attempted JEE, NEET, both, or neither?</p>
+        <div id="interview-window" class="chat-window">
+          <div class="chat-message bot">I will ask a short set of questions to personalize your learning and wellbeing support.</div>
+        </div>
+        <div class="voice-row">
+          <span id="interview-voice-status" class="voice-status">Voice ready</span>
+          <div class="voice-actions">
+            <button id="interview-mic" class="ghost-btn" type="button">Talk</button>
+            <button id="interview-voice-toggle" class="ghost-btn" type="button">Voice On</button>
+          </div>
+        </div>
+        <form id="interview-form" class="chat-form" autocomplete="off">
+          <input id="interview-answer" type="text" placeholder="Speak or type your answer..." maxlength="500" required />
+          <button type="submit">Submit Answer</button>
+        </form>
+        <input id="interview-step" type="hidden" value="0" />
+        <p id="interview-save-hint" class="auth-note" hidden>Interview complete. Review the fields below, then click Save and Continue.</p>
+      </section>
 
       <form method="post" class="auth-form">
         <label>Have you previously prepared for NEET/JEE?
@@ -169,6 +210,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>How many months were you out of regular study?
           <input type="number" min="0" name="study_gap_months" value="<?php echo htmlspecialchars($form['study_gap_months'], ENT_QUOTES, 'UTF-8'); ?>" />
         </label>
+        <label>Total gap years in education
+          <input type="number" min="0" name="gap_years" value="<?php echo htmlspecialchars($form['gap_years'], ENT_QUOTES, 'UTF-8'); ?>" />
+        </label>
+        <label>Main reason for gap years
+          <input type="text" name="gap_year_reason" value="<?php echo htmlspecialchars($form['gap_year_reason'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Financial constraints, exam prep break, family reason, health, etc." />
+        </label>
+        <label>How are you feeling about studies currently?
+          <select name="feeling_about_studies" required>
+            <option value="motivated" <?php echo $form['feeling_about_studies'] === 'motivated' ? 'selected' : ''; ?>>Motivated</option>
+            <option value="neutral" <?php echo $form['feeling_about_studies'] === 'neutral' ? 'selected' : ''; ?>>Neutral</option>
+            <option value="stressed" <?php echo $form['feeling_about_studies'] === 'stressed' ? 'selected' : ''; ?>>Stressed</option>
+            <option value="burned_out" <?php echo $form['feeling_about_studies'] === 'burned_out' ? 'selected' : ''; ?>>Burned out</option>
+          </select>
+        </label>
+        <label>Are you feeling uncomfortable due to personal/academic issues?
+          <select name="discomfort_due_to_issues" required>
+            <option value="0" <?php echo $form['discomfort_due_to_issues'] === '0' ? 'selected' : ''; ?>>No</option>
+            <option value="1" <?php echo $form['discomfort_due_to_issues'] === '1' ? 'selected' : ''; ?>>Yes</option>
+          </select>
+        </label>
+        <label>If yes, what is causing this discomfort?
+          <input type="text" name="discomfort_reason" value="<?php echo htmlspecialchars($form['discomfort_reason'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Stress, family pressure, financial anxiety, confidence issues, etc." />
+        </label>
 
         <label>Current confidence level
           <select name="confidence_level" required>
@@ -190,5 +254,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
     </section>
   </main>
+  <script src="assets/js/onboarding.js"></script>
 </body>
 </html>

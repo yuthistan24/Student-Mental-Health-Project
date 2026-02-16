@@ -135,6 +135,13 @@ $isAdmin = $role === 'admin';
         <div id="chat-window" class="chat-window">
           <div class="chat-message bot">I am your platform assistant. Ask: "Who is highest risk?" or "Give attendance intervention ideas."</div>
         </div>
+        <div class="voice-row">
+          <span id="chat-voice-status" class="voice-status">Voice ready</span>
+          <div class="voice-actions">
+            <button id="chat-mic" class="ghost-btn" type="button">Talk</button>
+            <button id="chat-voice-toggle" class="ghost-btn" type="button">Voice On</button>
+          </div>
+        </div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" type="text" placeholder="Type a question..." maxlength="500" required />
           <button type="submit">Send</button>
@@ -157,4 +164,3 @@ $isAdmin = $role === 'admin';
   <script src="assets/js/app.js"></script>
 </body>
 </html>
-

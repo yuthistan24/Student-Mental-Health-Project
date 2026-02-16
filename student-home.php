@@ -115,6 +115,13 @@ try {
         <div id="chat-window" class="chat-window">
           <div class="chat-message bot">I am your study assistant. Ask: "How can I improve my attendance?"</div>
         </div>
+        <div class="voice-row">
+          <span id="chat-voice-status" class="voice-status">Voice ready</span>
+          <div class="voice-actions">
+            <button id="chat-mic" class="ghost-btn" type="button">Talk</button>
+            <button id="chat-voice-toggle" class="ghost-btn" type="button">Voice On</button>
+          </div>
+        </div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" type="text" placeholder="Type your question..." maxlength="500" required />
           <button type="submit">Send</button>

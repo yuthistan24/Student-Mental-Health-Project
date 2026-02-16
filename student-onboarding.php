@@ -29,8 +29,8 @@ $student = requireStudentLogin(false);
         <div class="voice-row">
           <span id="interview-voice-status" class="voice-status">Voice ready</span>
           <div class="voice-actions">
-            <button id="interview-mic" class="ghost-btn" type="button">Talk</button>
-            <button id="interview-voice-toggle" class="ghost-btn" type="button">Voice On</button>
+            <button id="interview-mic" class="ghost-btn" type="button" title="Click to speak your answer" aria-label="Talk"><span class="btn-text">Talk</span></button>
+            <button id="interview-voice-toggle" class="ghost-btn" type="button" title="Toggle voice output" aria-label="Voice On"><span class="btn-text">Voice On</span></button>
           </div>
         </div>
         <form id="interview-form" class="chat-form" autocomplete="off">

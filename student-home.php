@@ -118,8 +118,8 @@ try {
         <div class="voice-row">
           <span id="chat-voice-status" class="voice-status">Voice ready</span>
           <div class="voice-actions">
-            <button id="chat-mic" class="ghost-btn" type="button" title="Click to speak your question">Talk</button>
-            <button id="chat-voice-toggle" class="ghost-btn" type="button" title="Toggle voice output">Voice On</button>
+            <button id="chat-mic" class="ghost-btn" type="button" title="Click to speak your question" aria-label="Talk"><span class="btn-text">Talk</span></button>
+            <button id="chat-voice-toggle" class="ghost-btn" type="button" title="Toggle voice output" aria-label="Voice On"><span class="btn-text">Voice On</span></button>
           </div>
         </div>
         <form id="chat-form" class="chat-form">

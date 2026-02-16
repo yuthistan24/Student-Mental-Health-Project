@@ -671,6 +671,10 @@ th {
   animation: pulse-btn 1.5s ease-in-out infinite;
 }
 
+.ghost-btn.listening .btn-text {
+  color: #92400e;
+}
+
 @keyframes pulse-btn {
   0%, 100% {
     box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
@@ -700,6 +704,13 @@ th {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease;
+  margin-right: 4px;
+}
+
+.btn-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline;
 }
 
 .ghost-btn:hover::before {
@@ -728,11 +739,43 @@ th {
   content: '🎵';
 }
 
+.ghost-btn#chat-voice-toggle.listening::before {
+  content: '👂';
+  animation: pulse-icon 1s ease-in-out infinite;
+}
+
 .ghost-btn#chat-voice-toggle.muted::before {
   content: '🔇';
 }
 
 .ghost-btn#chat-voice-toggle.active::before {
+  content: '🔊';
+}
+
+/* Interview button styles */
+.ghost-btn#interview-mic::before {
+  content: '🎤';
+}
+
+.ghost-btn#interview-mic.listening::before {
+  content: '⏹️';
+  animation: pulse-icon 1s ease-in-out infinite;
+}
+
+.ghost-btn#interview-voice-toggle::before {
+  content: '🎵';
+}
+
+.ghost-btn#interview-voice-toggle.listening::before {
+  content: '👂';
+  animation: pulse-icon 1s ease-in-out infinite;
+}
+
+.ghost-btn#interview-voice-toggle.muted::before {
+  content: '🔇';
+}
+
+.ghost-btn#interview-voice-toggle.active::before {
   content: '🔊';
 }
 

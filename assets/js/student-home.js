@@ -125,26 +125,33 @@ function createVoiceAssistant() {
     };
     
     state.recognition.onresult = (event) => {
-      let transcript = '';
-      let isFinal = false;
+      let finalTranscript = '';
+      let interimTranscript = '';
       
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptPart = event.results[i][0].transcript;
-        transcript += transcriptPart;
+        
         if (event.results[i].isFinal) {
-          isFinal = true;
+          finalTranscript += transcriptPart + ' ';
+        } else {
+          interimTranscript += transcriptPart;
         }
       }
       
-      transcript = transcript.trim();
-      if (transcript) {
+      // Combine final and interim transcripts for display
+      const currentTranscript = finalTranscript + interimTranscript;
+      
+      if (currentTranscript.trim()) {
         // Update last speech time whenever we get speech
         state.lastSpeechTime = Date.now();
-        input.value = transcript;
+        input.value = currentTranscript.trim();
         input.focus();
         
-        if (isFinal) {
-          status.textContent = '✓ Ready to listen';
+        // Show different status messages
+        if (finalTranscript.trim()) {
+          status.textContent = '✓ Got your message';
+        } else if (interimTranscript.trim()) {
+          status.textContent = '👂 Hearing you...';
         }
       }
     };
@@ -159,10 +166,14 @@ function createVoiceAssistant() {
       if (state.isListening) {
         state.recognition.stop();
         clearTimeout(state.silenceTimer);
+        micButton.classList.remove('listening');
+        if (voiceToggle) voiceToggle.classList.remove('listening');
       } else {
         try {
           input.focus();
+          input.value = ''; // Clear input when starting new recording
           state.recognition.start();
+          if (voiceToggle) voiceToggle.classList.add('listening');
         } catch (error) {
           status.textContent = '❌ Error starting speech recognition';
           status.classList.add('error');

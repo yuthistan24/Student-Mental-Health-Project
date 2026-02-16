@@ -29,6 +29,8 @@ try {
             'active' => false,
             'index' => 0,
             'answers' => [],
+            'conversation_history' => [],
+            'asked_questions' => [],
         ];
     }
 
@@ -77,7 +79,21 @@ try {
         ]);
     }
 
-    $reply = buildStudentGuidanceReply($q, $stats, $profile);
+    $reply = buildSmartGuidanceReply($conn, $studentId, $q, $stats, $profile, $state);
+    
+    // Track the conversation
+    $state['conversation_history'][] = [
+        'role' => 'user',
+        'message' => $message,
+        'timestamp' => time(),
+    ];
+    $state['conversation_history'][] = [
+        'role' => 'bot',
+        'message' => $reply,
+        'timestamp' => time(),
+    ];
+    
+    $_SESSION[$sessionKey] = $state;
 
     jsonResponse([
         'reply' => $reply,
@@ -539,6 +555,356 @@ function normalizeEnum(string $value, array $allowed, string $fallback): string
         return $v;
     }
     return $fallback;
+}
+
+function saveConversationMessage(mysqli $conn, int $studentId, string $userMessage, string $botReply, string $topic = 'general'): void
+{
+    $stmt = $conn->prepare('
+        INSERT INTO student_chatbot_conversations (student_id, user_message, bot_reply, message_type, topic_category)
+        VALUES (?, ?, ?, "question", ?)
+    ');
+    
+    if ($stmt) {
+        $stmt->bind_param('isss', $studentId, $userMessage, $botReply, $topic);
+        $stmt->execute();
+    }
+}
+
+function loadPastConversationPatterns(mysqli $conn, int $studentId): array
+{
+    $patterns = [
+        'frequently_discussed' => [],
+        'recent_concerns' => [],
+        'resolved_issues' => [],
+        'recurring_topics' => [],
+    ];
+    
+    // Get the 50 most recent conversations
+    $result = $conn->query("
+        SELECT user_message, bot_reply, topic_category, created_at
+        FROM student_chatbot_conversations
+        WHERE student_id = {$studentId}
+        ORDER BY created_at DESC
+        LIMIT 50
+    ");
+    
+    if (!$result) {
+        return $patterns;
+    }
+    
+    $topicCounts = [];
+    $allTopics = [];
+    
+    while ($row = $result->fetch_assoc()) {
+        $topic = $row['topic_category'] ?? 'general';
+        $allTopics[] = $topic;
+        
+        $topicCounts[$topic] = ($topicCounts[$topic] ?? 0) + 1;
+    }
+    
+    // Find frequently discussed topics
+    arsort($topicCounts);
+    $patterns['frequently_discussed'] = array_keys(array_slice($topicCounts, 0, 3, true));
+    
+    // Find recurring topics (appeared more than once)
+    $patterns['recurring_topics'] = array_keys(array_filter($topicCounts, function($count) { return $count > 1; }));
+    
+    return $patterns;
+}
+
+function buildSmartGuidanceReply(mysqli $conn, int $studentId, string $q, array $stats, ?array $profile, array &$state): string
+{
+    // Analyze gaps in student profile
+    $profileGaps = identifyProfileGaps($profile);
+    $performanceIssues = identifyPerformanceIssues($stats);
+    $recentTopics = extractConversationTopics($state['conversation_history']);
+    
+    // Get conversation patterns from database (recent conversations)
+    $pastPatterns = loadPastConversationPatterns($conn, $studentId);
+    
+    // First, check if user is asking about something specific
+    $directReply = handleDirectQuestions($q, $stats, $profile);
+    if ($directReply) {
+        // Save to database
+        saveConversationMessage($conn, $studentId, htmlspecialchars($q, ENT_QUOTES), htmlspecialchars($directReply, ENT_QUOTES), 'question');
+        return $directReply;
+    }
+    
+    // Generate personalized follow-up questions based on what we know
+    $nextQuestion = generateSmartFollowUp($studentId, $stats, $profile, $state, $profileGaps, $performanceIssues, $recentTopics, $pastPatterns);
+    
+    // Save to database
+    saveConversationMessage($conn, $studentId, htmlspecialchars($q, ENT_QUOTES), htmlspecialchars($nextQuestion, ENT_QUOTES), 'question');
+    
+    return $nextQuestion;
+}
+
+function identifyProfileGaps(?array $profile): array
+{
+    $gaps = [];
+    
+    if (!$profile) {
+        return ['all' => ['attempted_exam', 'confidence_level', 'goals', 'primary_challenge']];
+    }
+    
+    $criticalFields = [
+        'attempted_exam' => 'none',
+        'confidence_level' => null,
+        'feeling_about_studies' => null,
+        'primary_challenge' => null,
+        'goals' => null,
+    ];
+    
+    foreach ($criticalFields as $field => $emptyValue) {
+        $value = $profile[$field] ?? $emptyValue;
+        if ($value === null || $value === '' || $value === $emptyValue) {
+            $gaps[] = $field;
+        }
+    }
+    
+    return $gaps;
+}
+
+function identifyPerformanceIssues(array $stats): array
+{
+    $issues = [];
+    
+    if ($stats['attendance_pct'] < 85) {
+        $issues[] = ['type' => 'attendance', 'severity' => 'high', 'value' => $stats['attendance_pct']];
+    }
+    
+    if ($stats['avg_score'] < 65) {
+        $issues[] = ['type' => 'low_scores', 'severity' => 'high', 'value' => $stats['avg_score']];
+    }
+    
+    if ($stats['completion_pct'] < 50) {
+        $issues[] = ['type' => 'low_completion', 'severity' => 'medium', 'value' => $stats['completion_pct']];
+    }
+    
+    if ($stats['behavior_incidents'] > 2) {
+        $issues[] = ['type' => 'behavior', 'severity' => 'medium', 'value' => $stats['behavior_incidents']];
+    }
+    
+    return $issues;
+}
+
+function extractConversationTopics(array $history): array
+{
+    $topics = [];
+    $keywords = [
+        'attendance' => ['attend', 'absent', 'present', 'class', 'miss'],
+        'scores' => ['score', 'grade', 'mark', 'exam', 'test', 'perform'],
+        'stress' => ['stress', 'anxious', 'pressure', 'overwhelm', 'burden'],
+        'gap' => ['gap', 'break', 'break study', 'took time off'],
+        'stream' => ['stream', 'subject', 'course', 'discipline'],
+        'financial' => ['money', 'cost', 'fee', 'financial', 'afford'],
+        'sleep' => ['sleep', 'tired', 'exhausted', 'rest', 'fatigue'],
+        'motivation' => ['motiv', 'interest', 'bored', 'engaged', 'focus'],
+    ];
+    
+    foreach ($history as $entry) {
+        if ($entry['role'] !== 'user') continue;
+        
+        $msg = strtolower($entry['message']);
+        foreach ($keywords as $topic => $words) {
+            foreach ($words as $word) {
+                if (strpos($msg, $word) !== false) {
+                    if (!in_array($topic, $topics)) {
+                        $topics[] = $topic;
+                    }
+                }
+            }
+        }
+    }
+    
+    return $topics;
+}
+
+function handleDirectQuestions(string $q, array $stats, ?array $profile): ?string
+{
+    if (strpos($q, 'attendance') !== false) {
+        $reply = $stats['attendance_pct'] < 85
+            ? 'Your attendance is at ' . round($stats['attendance_pct'], 1) . '%. Try setting daily reminders to attend all classes. Even one day off impacts your consistency. What\'s causing you to miss class?'
+            : 'Your attendance (' . round($stats['attendance_pct'], 1) . '%) is excellent! How are you managing to maintain this consistency?';
+        return $reply;
+    }
+    
+    if (strpos($q, 'score') !== false || strpos($q, 'grade') !== false) {
+        $reply = $stats['avg_score'] < 65
+            ? 'Your average score is ' . round($stats['avg_score'], 1) . '%. Let\'s focus on your weakest subject first. Which subject is hardest for you right now?'
+            : 'Your average score is ' . round($stats['avg_score'], 1) . '%, which shows decent progress. What topic would you like to strengthen the most?';
+        return $reply;
+    }
+    
+    if (strpos($q, 'plan') !== false || (strpos($q, 'study') !== false && strpos($q, 'plan') !== false)) {
+        return 'A good daily plan: Start with your weakest subject (25 min focused study), then take 5-min break, follow with 10-question quiz, review mistakes, ask for help. Would you like to create one together?';
+    }
+    
+    if (strpos($q, 'stress') !== false || strpos($q, 'anxious') !== false || strpos($q, 'pressure') !== false) {
+        return 'Stress is common. Try the Pomodoro technique (25-min study + 5-min break), take short walks, and talk to a counselor. What specifically is stressing you most?';
+    }
+    
+    if (strpos($q, 'sleep') !== false || strpos($q, 'tired') !== false || strpos($q, 'exhausted') !== false) {
+        return 'Sleep is crucial for learning. Aim for 7-8 hours and keep a consistent sleep schedule. Are you getting enough sleep, or is something keeping you awake?';
+    }
+    
+    if (strpos($q, 'motivation') !== false || strpos($q, 'interested') !== false || strpos($q, 'bored') !== false) {
+        return 'Motivation often comes from connecting learning to your goals. What do you actually want to achieve after your studies?';
+    }
+    
+    return null;
+}
+
+function generateSmartFollowUp(int $studentId, array $stats, ?array $profile, array $state, array $profileGaps, array $performanceIssues, array $recentTopics, array $pastPatterns = []): string
+{
+    // Priority order: 1. Address critical gaps, 2. Address performance issues, 3. Dig deeper into recent topics
+    // But avoid topics that have been discussed extensively already
+    
+    $frequentlyAsked = $pastPatterns['frequently_discussed'] ?? [];
+    
+    // If we haven't covered attendance issues, ask about it  
+    if (!in_array('attendance', $recentTopics) && !in_array('attendance', $frequentlyAsked) && $stats['attendance_pct'] < 85) {
+        return 'I notice your attendance is ' . round($stats['attendance_pct'], 1) . '%. What\'s the main reason you\'re missing classes? Is it personal issues, health, or something else?';
+    }
+    
+    // If scores are low and not discussed extensively
+    if (!in_array('scores', $recentTopics) && !in_array('scores', $frequentlyAsked) && $stats['avg_score'] < 65) {
+        $weakestArea = $stats['avg_score'] < 50 ? 'critical' : 'needs improvement';
+        return 'Your scores are in a ' . $weakestArea . ' range. What\'s the biggest topic or concept that\'s confusing for you?';
+    }
+    
+    // Fill critical profile gaps (these are important and should be asked)
+    if (in_array('primary_challenge', $profileGaps)) {
+        return 'To help you better, what would you say is your single biggest challenge in studies right now?';
+    }
+    
+    if (in_array('goals', $profileGaps)) {
+        return 'What\'s your main goal for the next 3 months? Are you aiming for better grades, completing modules, or something else?';
+    }
+    
+    if (in_array('confidence_level', $profileGaps)) {
+        return 'How confident do you feel about achieving your academic goals right now: low, medium, or high?';
+    }
+    
+    if (in_array('feeling_about_studies', $profileGaps) && !in_array('motivation', $recentTopics) && !in_array('stress', $frequentlyAsked)) {
+        return 'Overall, how are you feeling about your studies? Are you motivated, neutral, stressed, or burned out?';
+    }
+    
+    // If profile has gaps in exam attempts
+    if ($profile && ($profile['attempted_exam'] ?? 'none') === 'none' && !in_array('stream', $recentTopics) && !in_array('stream', $frequentlyAsked)) {
+        return 'Have you prepared for or attempted any competitive exams (JEE or NEET)? This helps me understand your goals better.';
+    }
+    
+    // Deep dive into noted challenges with contextual follow-ups
+    if ($profile && !empty($profile['primary_challenge'])) {
+        $challenge = strtolower($profile['primary_challenge']);
+        
+        // Rotate through different follow-up types to avoid repetition
+        $rand = rand(1, 3);
+        
+        if (strpos($challenge, 'time') !== false) {
+            if ($rand === 1) {
+                return 'For time management, how many hours per day can you realistically study?';
+            } elseif ($rand === 2) {
+                return 'Do you have a fixed schedule for studying, or is it more flexible/random?';
+            } else {
+                return 'What time of day are you most productive for studying?';
+            }
+        }
+        
+        if (strpos($challenge, 'concept') !== false || strpos($challenge, 'understand') !== false) {
+            if ($rand === 1) {
+                return 'For understanding concepts, breaking them into smaller parts helps. Which subject feels the hardest to grasp?';
+            } elseif ($rand === 2) {
+                return 'Do you learn better with examples, diagrams, or step-by-step explanations?';
+            } else {
+                return 'Have you tried explaining concepts to someone else or teaching topics to deepen understanding?';
+            }
+        }
+        
+        if (strpos($challenge, 'focus') !== false || strpos($challenge, 'concentration') !== false || strpos($challenge, 'distraction') !== false) {
+            if ($rand === 1) {
+                return 'For focus and concentration, what\'s your biggest distraction: phone, noise, fatigue, or something else?';
+            } elseif ($rand === 2) {
+                return 'Do you use any techniques to stay focused, like Pomodoro timer (25 min focus + 5 min break)?';
+            } else {
+                return 'Where do you study best: at home, library, community hub, or elsewhere?';
+            }
+        }
+    }
+    
+    // If student has financial or work-study history, check multiple angles
+    if ($profile && ((int)($profile['financial_issues'] ?? 0) || (int)($profile['worked_after_school'] ?? 0))) {
+        if (!in_array('stress', $recentTopics) && !in_array('financial', $frequentlyAsked)) {
+            return 'Managing finances or work alongside studies is challenging. How is this affecting your ability to focus and sleep?';
+        }
+        if (!in_array('financial', $recentTopics)) {
+            return 'For financial challenges, are there low-cost resources (community hubs, free online courses) that could help?';
+        }
+    }
+    
+    // If stream mismatch, explore multiple dimensions
+    if ($profile && (int)($profile['stream_mismatch'] ?? 0) === 1) {
+        if (!in_array('stream', $recentTopics)) {
+            $favResponse = rand(1, 2) === 1 
+                ? 'Since you changed streams, which subjects from your previous stream do you miss?' 
+                : 'How are you adjusting to your current stream? Are you enjoying the new subjects?';
+            return $favResponse;
+        }
+    }
+    
+    // If study gap, explore readiness and progress
+    if ($profile && ((int)($profile['study_gap_months'] ?? 0) >= 6 || (int)($profile['gap_years'] ?? 0) > 0)) {
+        if (!in_array('gap', $recentTopics) && !in_array('gap', $frequentlyAsked)) {
+            return 'After your study gap, what feels the rustiest: specific subjects or general problem-solving skills?';
+        }
+        if (!in_array('motivation', $recentTopics)) {
+            return 'Since returning to studies, what\'s been the hardest adjustment?';
+        }
+    }
+    
+    // Monitor progress on known issues
+    if ($stats['completion_pct'] < 50 && !in_array('completion', $frequentlyAsked)) {
+        return 'I see you\'ve completed about ' . round($stats['completion_pct'], 0) . '% of your modules. What\'s the main blocker: difficulty, time, or interest?';
+    }
+    
+    // Reinforce positive progress
+    if ($stats['avg_score'] >= 75 && $stats['attendance_pct'] >= 85 && !in_array('celebration', $frequentlyAsked)) {
+        return 'Your scores and attendance are excellent! What\'s your secret to maintaining such good performance?';
+    }
+    
+    // Exploratory questions - rotate through different angles to avoid repetition
+    $exploratoryQuestions = [
+        'What do you find most interesting to study?',
+        'If you could change one thing about how you learn, what would it be?',
+        'Do you have a mentor, tutor, or peer study group?',
+        'What\'s one small win you\'ve achieved in your studies recently?',
+        'Are there any subjects where you feel naturally talented?',
+        'What would make studying feel less overwhelming?',
+        'Do you have someone you can talk to when struggling?',
+        'How do you typically prepare for exams or assessments?',
+        'What\'s one thing you wish teachers explained better?',
+        'Are there any personal circumstances affecting your studies that I should know?',
+    ];
+    
+    // Return a question not yet asked recently
+    $askedQuestions = $state['asked_questions'] ?? [];
+    $unused = array_filter($exploratoryQuestions, function($q) use ($askedQuestions) {
+        return !in_array($q, $askedQuestions);
+    });
+    
+    if (!empty($unused)) {
+        $nextQuestion = reset($unused);
+        $state['asked_questions'][] = $nextQuestion;
+        return $nextQuestion;
+    }
+    
+    // If all questions have been asked, reset and return a fresh one
+    if (count($askedQuestions) > 5) {
+        $state['asked_questions'] = [];
+    }
+    
+    return 'How can I help you with your studies today? Ask me about scores, attendance, focus, stress, or your learning goals.';
 }
 
 function buildStudentGuidanceReply(string $q, array $stats, ?array $profile): string

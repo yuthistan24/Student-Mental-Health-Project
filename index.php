@@ -27,11 +27,13 @@ $studentUser = currentStudent();
       <?php if ($user): ?>
         <strong><?php echo htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
         <span><?php echo htmlspecialchars(ucfirst($user['role']), ENT_QUOTES, 'UTF-8'); ?></span>
-        <a class="logout-link" href="students.php">Students</a>
+        <a class="logout-link" href="students.php">Dashboard</a>
+        <a class="logout-link" href="logout.php">Logout</a>
       <?php elseif ($studentUser): ?>
         <strong><?php echo htmlspecialchars($studentUser['full_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
         <span>Student</span>
-        <a class="logout-link" href="student-home.php">My Home</a>
+        <a class="logout-link" href="student-home.php">Home</a>
+        <a class="logout-link" href="logout.php">Logout</a>
       <?php else: ?>
         <strong>Guest</strong>
         <span>Public Access</span>
@@ -60,23 +62,23 @@ $studentUser = currentStudent();
     </section>
 
     <section id="features" class="panel">
-      <h2>Feature Preview (Limited Access)</h2>
-      <p>Click any restricted feature below. You must log in to open the full module.</p>
+      <h2><?php echo ($user || $studentUser) ? 'Available Features' : 'Feature Preview (Limited Access)'; ?></h2>
+      <p><?php echo ($user || $studentUser) ? 'Full access to the platform features is now available.' : 'Click any restricted feature below. You must log in to open the full module.'; ?></p>
       <div class="grid three">
         <article class="hub-card locked-feature" data-feature="Early Warning Dashboard" role="button" tabindex="0">
           <h3>Early Warning Dashboard</h3>
           <p>Risk scoring, trends, and student intervention queue.</p>
-          <span class="lock-tag">Locked</span>
+          <?php if (!$user && !$studentUser): ?><span class="lock-tag">Locked</span><?php endif; ?>
         </article>
         <article class="hub-card locked-feature" data-feature="Actionable Alerts Center" role="button" tabindex="0">
           <h3>Actionable Alerts Center</h3>
           <p>Open alerts, recommendations, and case status tracking.</p>
-          <span class="lock-tag">Locked</span>
+          <?php if (!$user && !$studentUser): ?><span class="lock-tag">Locked</span><?php endif; ?>
         </article>
         <article class="hub-card locked-feature" data-feature="AI Support Chatbot" role="button" tabindex="0">
           <h3>AI Support Chatbot</h3>
           <p>Ask for intervention strategies and risk summaries.</p>
-          <span class="lock-tag">Locked</span>
+          <?php if (!$user && !$studentUser): ?><span class="lock-tag">Locked</span><?php endif; ?>
         </article>
       </div>
     </section>

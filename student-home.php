@@ -109,22 +109,22 @@ try {
     </section>
 
     <section class="panel">
-      <h2>AI Study Assistant</h2>
-      <p>Ask for study plans, attendance tips, and wellbeing guidance.</p>
+      <h2>🤖 AI Study Assistant</h2>
+      <p>Get personalized study plans, attendance tips, and wellbeing guidance through intelligent conversation.</p>
       <div class="chat-shell">
         <div id="chat-window" class="chat-window">
-          <div class="chat-message bot">I am your study assistant. Ask: "How can I improve my attendance?" or say "start profile interview" for a personalized intake chat.</div>
+          <div class="chat-message bot">Welcome! I'm your AI study assistant. Ask me about improving your attendance, study strategies, stress management, or say "start profile interview" for a personalized assessment.</div>
         </div>
         <div class="voice-row">
           <span id="chat-voice-status" class="voice-status">Voice ready</span>
           <div class="voice-actions">
-            <button id="chat-mic" class="ghost-btn" type="button">Talk</button>
-            <button id="chat-voice-toggle" class="ghost-btn" type="button">Voice On</button>
+            <button id="chat-mic" class="ghost-btn" type="button" title="Click to speak your question">Talk</button>
+            <button id="chat-voice-toggle" class="ghost-btn" type="button" title="Toggle voice output">Voice On</button>
           </div>
         </div>
         <form id="chat-form" class="chat-form">
-          <input id="chat-input" type="text" placeholder="Type your question..." maxlength="500" required />
-          <button type="submit">Send</button>
+          <input id="chat-input" type="text" placeholder="Type your question or say 'start profile interview'..." maxlength="500" required />
+          <button type="submit" title="Send your message">Send</button>
         </form>
       </div>
     </section>

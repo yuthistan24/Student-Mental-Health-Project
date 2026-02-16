@@ -19,106 +19,260 @@ function appendChatMessage(role, text) {
 }
 
 function createVoiceAssistant() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  // Check for browser support with better fallback
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || window.mozSpeechRecognition || window.msSpeechRecognition;
   const synth = window.speechSynthesis;
+  
   const micButton = document.getElementById('chat-mic');
   const voiceToggle = document.getElementById('chat-voice-toggle');
   const input = document.getElementById('chat-input');
   const status = document.getElementById('chat-voice-status');
+  
   const state = {
     canListen: !!SpeechRecognition,
     canSpeak: !!synth,
     isListening: false,
     speakEnabled: true,
     recognition: null,
+    silenceTimer: null,
+    silenceThreshold: 5000, // 5 seconds of silence
+    lastSpeechTime: 0,
   };
 
   if (!micButton || !voiceToggle || !input || !status) {
     return state;
   }
 
+  // Handle unsupported browsers
   if (!state.canListen) {
     micButton.disabled = true;
-    micButton.title = 'Voice input is not supported in this browser.';
+    micButton.classList.add('disabled');
+    micButton.title = 'Voice input not supported in your browser';
   }
 
   if (!state.canSpeak) {
     voiceToggle.disabled = true;
-    voiceToggle.title = 'Voice output is not supported in this browser.';
+    voiceToggle.classList.add('disabled');
+    voiceToggle.title = 'Voice output not supported in your browser';
     state.speakEnabled = false;
   }
 
+  // Initialize speech recognition
   if (state.canListen) {
     state.recognition = new SpeechRecognition();
     state.recognition.lang = 'en-US';
-    state.recognition.continuous = false;
-    state.recognition.interimResults = false;
+    state.recognition.continuous = true;
+    state.recognition.interimResults = true;
+    state.recognition.maxAlternatives = 1;
+    
     state.recognition.onstart = () => {
       state.isListening = true;
-      micButton.classList.add('active');
-      status.textContent = 'Listening...';
+      micButton.classList.add('listening');
+      micButton.setAttribute('aria-pressed', 'true');
+      status.textContent = '🎤 Listening...';
+      status.classList.add('listening');
+      state.lastSpeechTime = Date.now();
+      
+      // Start silence detection timer
+      clearTimeout(state.silenceTimer);
+      state.silenceTimer = setInterval(() => {
+        const timeSinceSpeech = Date.now() - state.lastSpeechTime;
+        if (timeSinceSpeech > state.silenceThreshold && state.isListening) {
+          // 5 seconds of silence detected, stop recording
+          state.recognition.stop();
+          status.textContent = '⏸️ Silence detected - stopped';
+          setTimeout(() => {
+            status.textContent = '✓ Ready to listen';
+            status.classList.remove('listening');
+          }, 1500);
+        }
+      }, 100);
     };
+    
     state.recognition.onend = () => {
       state.isListening = false;
-      micButton.classList.remove('active');
-      status.textContent = 'Voice ready';
+      micButton.classList.remove('listening');
+      micButton.setAttribute('aria-pressed', 'false');
+      clearTimeout(state.silenceTimer);
+      status.classList.remove('listening');
+      if (!status.classList.contains('error')) {
+        status.textContent = '✓ Ready to listen';
+      }
     };
-    state.recognition.onerror = () => {
+    
+    state.recognition.onerror = (event) => {
       state.isListening = false;
-      micButton.classList.remove('active');
-      status.textContent = 'Voice input unavailable. Try typing.';
+      micButton.classList.remove('listening');
+      micButton.setAttribute('aria-pressed', 'false');
+      clearTimeout(state.silenceTimer);
+      
+      let errorMsg = 'Voice input unavailable';
+      if (event.error === 'network') {
+        errorMsg = '🌐 Network error - check your connection';
+      } else if (event.error === 'no-speech') {
+        errorMsg = '🔇 No speech detected - try again';
+      } else if (event.error === 'audio-capture') {
+        errorMsg = '🎤 Microphone not available';
+      } else if (event.error !== 'aborted') {
+        errorMsg = `⚠️ ${event.error}`;
+      }
+      
+      if (event.error !== 'aborted') {
+        status.textContent = errorMsg;
+        status.classList.add('error');
+        setTimeout(() => status.classList.remove('error'), 2000);
+      }
     };
+    
     state.recognition.onresult = (event) => {
-      const text = event.results?.[0]?.[0]?.transcript?.trim() || '';
-      if (text) {
-        input.value = text;
+      let transcript = '';
+      let isFinal = false;
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptPart = event.results[i][0].transcript;
+        transcript += transcriptPart;
+        if (event.results[i].isFinal) {
+          isFinal = true;
+        }
+      }
+      
+      transcript = transcript.trim();
+      if (transcript) {
+        // Update last speech time whenever we get speech
+        state.lastSpeechTime = Date.now();
+        input.value = transcript;
         input.focus();
+        
+        if (isFinal) {
+          status.textContent = '✓ Ready to listen';
+        }
       }
     };
   }
 
-  micButton.addEventListener('click', () => {
-    if (!state.recognition) return;
-    if (state.isListening) {
-      state.recognition.stop();
-    } else {
-      state.recognition.start();
-    }
-  });
+  // Talk button - start/stop listening
+  if (micButton) {
+    micButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!state.recognition) return;
+      
+      if (state.isListening) {
+        state.recognition.stop();
+        clearTimeout(state.silenceTimer);
+      } else {
+        try {
+          input.focus();
+          state.recognition.start();
+        } catch (error) {
+          status.textContent = '❌ Error starting speech recognition';
+          status.classList.add('error');
+          setTimeout(() => status.classList.remove('error'), 2000);
+        }
+      }
+    });
+  }
 
-  voiceToggle.addEventListener('click', () => {
-    state.speakEnabled = !state.speakEnabled;
-    voiceToggle.textContent = state.speakEnabled ? 'Voice On' : 'Voice Off';
-    if (!state.speakEnabled && state.canSpeak) {
-      synth.cancel();
-    }
-  });
+  // Voice toggle - enable/disable audio output
+  if (voiceToggle) {
+    voiceToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      state.speakEnabled = !state.speakEnabled;
+      
+      if (state.speakEnabled) {
+        voiceToggle.classList.remove('muted');
+        voiceToggle.setAttribute('aria-pressed', 'false');
+        voiceToggle.classList.add('active');
+        status.textContent = '🔊 Voice on';
+      } else {
+        voiceToggle.classList.add('muted');
+        voiceToggle.classList.remove('active');
+        voiceToggle.setAttribute('aria-pressed', 'true');
+        status.textContent = '🔇 Voice off';
+        if (state.canSpeak) {
+          synth.cancel();
+        }
+      }
+      
+      setTimeout(() => {
+        if (!state.isListening) {
+          status.textContent = '✓ Ready to listen';
+        }
+      }, 1500);
+    });
+  }
 
   return state;
 }
 
 function speakText(voiceState, text) {
   if (!voiceState || !voiceState.canSpeak || !voiceState.speakEnabled) return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1;
-  utterance.pitch = 1;
+  
+  // Cancel any ongoing speech
   window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+  
+  // Better voice selection with fallback
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    // Try to find English voice (prefer Google voices on Chrome)
+    let selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.startsWith('en'));
+    }
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+  }
+  
+  // Handle speech completion
+  utterance.onend = () => {
+    // Speech finished
+  };
+  
+  utterance.onerror = (event) => {
+    console.error('Speech synthesis error:', event.error);
+  };
+  
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error('Speech synthesis error:', error);
+  }
 }
 
 function setupStudentChatbot() {
   const form = document.getElementById('chat-form');
   const input = document.getElementById('chat-input');
+  const status = document.getElementById('chat-voice-status');
   if (!form || !input) return;
+  
   const voiceState = createVoiceAssistant();
+  
+  // Initialize voice toggle button state
+  const voiceToggle = document.getElementById('chat-voice-toggle');
+  if (voiceToggle) {
+    voiceToggle.classList.add('active');
+    voiceToggle.setAttribute('aria-pressed', 'false');
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const message = input.value.trim();
     if (!message) return;
 
+    // Disable form while processing
+    const button = form.querySelector('button[type="submit"]');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    
     appendChatMessage('user', message);
     input.value = '';
+    input.focus();
 
     try {
       const payload = await fetchJson('api/student-chatbot.php', {
@@ -128,11 +282,24 @@ function setupStudentChatbot() {
       });
 
       appendChatMessage('bot', payload.reply);
-      speakText(voiceState, payload.reply);
+      
+      // Only speak if voice is enabled
+      if (voiceState.speakEnabled) {
+        speakText(voiceState, payload.reply);
+      }
+      
+      // Update status
+      if (status && !voiceState.isListening) {
+        status.textContent = '✓ Ready to listen';
+      }
     } catch (error) {
-      const fallback = `Chatbot unavailable: ${error.message}`;
+      const fallback = `I'm having trouble responding: ${error.message}`;
       appendChatMessage('bot', fallback);
       speakText(voiceState, fallback);
+    } finally {
+      button.disabled = false;
+      button.style.opacity = '1';
+      input.focus();
     }
   });
 }

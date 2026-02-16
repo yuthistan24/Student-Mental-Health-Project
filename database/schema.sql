@@ -151,3 +151,16 @@ CREATE TABLE IF NOT EXISTS chatbot_messages (
     INDEX idx_chatbot_created (created_at)
 );
 
+CREATE TABLE IF NOT EXISTS student_chatbot_conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    user_message TEXT NOT NULL,
+    bot_reply TEXT NOT NULL,
+    message_type ENUM('question', 'statement', 'feedback') DEFAULT 'question',
+    topic_category VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    INDEX idx_student_chatbot_created (student_id, created_at),
+    INDEX idx_topic_category (topic_category)
+);
+
